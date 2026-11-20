@@ -14,6 +14,10 @@
             box-sizing: border-box;
             /* keeps padding from growing the image row */
         }
+        :root {
+            --selling-color: #e02b2b;
+            --buying-color: #2f7a3a;
+}
 
         body {
             background: url(ARC_Raiders_KeyArt_Background_01.jpg) no-repeat center/cover;
@@ -45,6 +49,18 @@
             aspect-ratio: 3 / 4;
             min-width: 0;
             container-type: inline-size;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.15s;
+        }
+
+
+        .blueprint-item.red {
+          background-color: var(--selling-color);
+        }
+
+        .blueprint-item.green {
+          background-color: var(--buying-color);
         }
 
         .blueprint-image {
@@ -77,7 +93,7 @@
             text-wrap: balance;
         }
 
-        #EGC .blueprint-name {
+        .long-name .blueprint-name {
             font-size: 13cqw;
         }
 
@@ -94,6 +110,39 @@
             margin: 0;
             font-size: 3cqw;
         }
+
+        .blueprint-legend {
+            display: flex;
+            align-items: center;
+            gap: 2cqw;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            font-size: 2.2cqw;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.8cqw;
+        }
+
+        /* The coloured pill before each label */
+        .legend-item::before {
+            content: "";
+            width: 3.5cqw;
+            height: 1.3cqw;
+            border: 0.2cqw solid #ece2d0;
+            border-radius: 0.2cqw;
+        }
+
+        .legend-selling::before {
+            background: var(--selling-color);
+        }
+
+        .legend-buying::before {
+            background: var(--buying-color);
+        }
     </style>
 </head>
 
@@ -102,6 +151,10 @@
     <section class="blueprint-section">
         <header class="blueprint-header">
             <h1 class="blueprint-title">Blueprints</h1>
+            <ul class="blueprint-legend">
+                <li class="legend-item legend-selling">Selling</li>
+                <li class="legend-item legend-buying">Buying</li>
+            </ul>
         </header>
 
         <div class="blueprint-grid">
@@ -172,7 +225,7 @@
             <div id="64" class="blueprint-item weapon">      <div class="blueprint-image"><img src="Blueprint_Images/Rascal_IV.png"                  alt="Rascal"                     ></div>    <div class="blueprint-name">Rascal                          </div></div>
             <div id="65" class="blueprint-item weapon">      <div class="blueprint-image"><img src="Blueprint_Images/Canto_IV.png"                   alt="Canto"                      ></div>    <div class="blueprint-name">Canto                           </div></div>
             <div id="66" class="blueprint-item weapon">      <div class="blueprint-image"><img src="Blueprint_Images/Bettina_IV.png"                 alt="Bettina"                    ></div>    <div class="blueprint-name">Bettina                         </div></div>
-            <div id="67" class="blueprint-item" id="EGC">    <div class="blueprint-image"><img src="Blueprint_Images/Emperor_Gateway_Conduit.png"    alt="Emperor Gateway Conduit"    ></div>    <div class="blueprint-name">Emperor Gateway Conduit         </div></div>
+            <div id="67" class="blueprint-item long-name">   <div class="blueprint-image"><img src="Blueprint_Images/Emperor_Gateway_Conduit.png"    alt="Emperor Gateway Conduit"    ></div>    <div class="blueprint-name">Emperor Gateway Conduit         </div></div>
             <div id="68" class="blueprint-item">             <div class="blueprint-image"><img src="Blueprint_Images/Fireworks_Box.png"              alt="Fireworks Box"              ></div>    <div class="blueprint-name">Fireworks Box                   </div></div>
             <div id="69" class="blueprint-item">             <div class="blueprint-image"><img src="Blueprint_Images/Gas_Mine.png"                   alt="Gas Mine"                   ></div>    <div class="blueprint-name">Gas Mine                        </div></div>
             <div id="70" class="blueprint-item">             <div class="blueprint-image"><img src="Blueprint_Images/Yellow_Light_Stick.png"         alt="Yellow Light Stick"         ></div>    <div class="blueprint-name">Yellow Light Stick              </div></div>
@@ -198,6 +251,67 @@
             <div id="90" class="blueprint-item">             <div class="blueprint-image"><img src="Blueprint_Images/Snap_Hook.png"                  alt="Snap Hook"                  ></div>    <div class="blueprint-name">Snap Hook                       </div></div>
         </div>
     </section>
+    <script>
+        const STORAGE_KEY = "blueprint-colors";
+        const COLOR_CYCLE = ["", "red", "green"]; // "" means neither
+    
+        const blueprintGrid = document.querySelector(".blueprint-grid");
+    
+        function loadSavedColors() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? {};
+            } catch {
+                return {}; // nothing saved yet, or the saved data is unreadable
+            }
+        }
+    
+        function saveColors(savedColors) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(savedColors));
+            } catch {
+                // storage is blocked or full, so the choice just won't survive a reload
+            }
+        }
+    
+        function applyColor(blueprintItem, color) {
+            blueprintItem.classList.remove("red", "green");
+            if (color) {
+                blueprintItem.classList.add(color);
+            }
+        }
+    
+        const savedColors = loadSavedColors();
+    
+        // Restore the saved colours when the page loads
+        for (const [itemId, color] of Object.entries(savedColors)) {
+            const blueprintItem = document.getElementById(itemId);
+            if (blueprintItem) {
+                applyColor(blueprintItem, color);
+            }
+        }
+    
+        // Cycle neither -> red -> green -> neither on every click
+        blueprintGrid.addEventListener("click", (event) => {
+            const blueprintItem = event.target.closest(".blueprint-item");
+            if (!blueprintItem) {
+                return; // the click was in the grid but not on a cell
+            }
+    
+            const currentColor = savedColors[blueprintItem.id] ?? "";
+            const nextIndex = (COLOR_CYCLE.indexOf(currentColor) + 1) % COLOR_CYCLE.length;
+            const nextColor = COLOR_CYCLE[nextIndex];
+    
+            applyColor(blueprintItem, nextColor);
+    
+            if (nextColor) {
+                savedColors[blueprintItem.id] = nextColor;
+            } else {
+                delete savedColors[blueprintItem.id]; // only coloured cells are stored
+            }
+    
+            saveColors(savedColors);
+        });
+    </script>
 </body>
 
 </html>
